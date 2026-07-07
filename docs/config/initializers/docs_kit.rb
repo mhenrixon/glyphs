@@ -47,11 +47,15 @@ Rails.application.config.to_prepare do
                          "components, with icon-name validation and legacy-helper " \
                          "autocorrection via bundled RuboCop cops."
     c.seo.site_url     = "https://glyphs.zoolutions.llc"
+    c.seo.og_image     = "og/og.png"
     c.seo.og_type      = "website"
     c.seo.twitter_card = "summary_large_image"
     c.seo.twitter_site = "@mhenrixon"
     c.seo.locale       = "en_US"
     c.seo.theme_color  = "#1d232a" # daisyUI dark base-100 (themes.first)
+    # favicon href is used verbatim (not through the asset pipeline), so it's a
+    # public/ path served at a stable root URL.
+    c.seo.favicon      = "/icon.svg"
 
     # The sidebar nav derives from the registry — one heading → one registry.
     # Each registry's authored pages become NavItems automatically (an unwritten
