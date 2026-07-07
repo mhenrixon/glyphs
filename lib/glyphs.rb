@@ -108,6 +108,8 @@ module Glyphs
   end
 end
 
-# Make the RuboCop plugin available when loaded inside a RuboCop process (or a
-# development environment where RuboCop is already loaded).
-require_relative "glyphs/rubocop" if defined?(RuboCop::Version)
+# Make the RuboCop plugin resolvable lazily: RuboCop constantizes
+# Glyphs::RuboCop::Plugin (from the gemspec's default_lint_roller_plugin
+# metadata) when it loads plugins, which can happen long after this gem was
+# required — e.g. app boots first, cop specs load RuboCop later.
+Glyphs.autoload :RuboCop, File.expand_path("glyphs/rubocop", __dir__)
