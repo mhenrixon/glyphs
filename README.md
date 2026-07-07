@@ -80,10 +80,11 @@ BrandIcon(:logo)
 ```ruby
 # config/initializers/glyphs.rb
 Glyphs.configure do |config|
-  # Re-raise Icons::IconNotFound? Default: true locally (dev/test), never blind in production.
-  config.raise_on_missing_icon = -> { Rails.env.local? }
+  # Re-raise Icons::IconNotFound? Defaults to true in local Rails
+  # environments (and outside Rails), false otherwise.
+  config.raise_on_missing = Rails.env.local?
 
-  # Instrumentation hook, called before the fallback renders.
+  # Optional handler, called before the fallback renders (when not raising).
   config.on_missing_icon = lambda do |error, name:, library:, variant:|
     Rails.logger.error("Icon missing: #{library}/#{variant}/#{name} (#{error.message})")
   end

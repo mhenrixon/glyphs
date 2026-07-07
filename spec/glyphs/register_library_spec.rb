@@ -24,7 +24,7 @@ RSpec.describe Glyphs, ".register_library" do
       end
     end
 
-    described_class.configure { |config| config.raise_on_missing_icon = -> { false } }
+    described_class.configure { |config| config.raise_on_missing = false }
     # :brand has no synced svgs and no fallback; rendering raises IconNotFound,
     # which proves the kit method dispatched into the component.
     expect { component_class.new.call }.to raise_error(Icons::IconNotFound)

@@ -5,12 +5,11 @@ RSpec.describe Glyphs::Configuration do
     subject(:configuration) { described_class.new }
 
     it "raises on missing icons outside Rails" do
-      expect(configuration.raise_on_missing_icon.call).to be(true)
+      expect(configuration.raise_on_missing).to be(true)
     end
 
-    it "has a no-op missing icon hook" do
-      expect { configuration.on_missing_icon.call(StandardError.new, name: "x", library: :lucide, variant: nil) }
-        .not_to raise_error
+    it "has no missing icon hook by default" do
+      expect(configuration.on_missing_icon).to be_nil
     end
 
     it "ships fallback icons for lucide, phosphor and heroicons" do

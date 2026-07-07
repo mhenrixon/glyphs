@@ -92,9 +92,9 @@ module Glyphs
     end
 
     def handle_missing_icon(error, name:, library:, variant:, attributes:)
-      raise error if configuration.raise_on_missing_icon.call
+      raise error if configuration.raise_on_missing
 
-      configuration.on_missing_icon.call(error, name:, library:, variant:)
+      configuration.on_missing_icon&.call(error, name:, library:, variant:)
 
       fallback = configuration.fallback_icons[library.to_sym]
       raise error if fallback.nil?

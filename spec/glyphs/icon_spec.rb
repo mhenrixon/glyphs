@@ -63,8 +63,8 @@ RSpec.describe Glyphs::Icon do
   end
 
   describe "missing icons" do
-    it "raises when raise_on_missing_icon returns true" do
-      Glyphs.configure { |config| config.raise_on_missing_icon = -> { true } }
+    it "raises when raise_on_missing is true" do
+      Glyphs.configure { |config| config.raise_on_missing = true }
 
       expect { Glyphs::LucideIcon.new(:does_not_exist).call }.to raise_error(Icons::IconNotFound)
     end
@@ -72,7 +72,7 @@ RSpec.describe Glyphs::Icon do
     it "renders the fallback icon and notifies the hook when not raising" do
       notified = []
       Glyphs.configure do |config|
-        config.raise_on_missing_icon = -> { false }
+        config.raise_on_missing = false
         config.on_missing_icon = lambda { |error, name:, library:, variant:|
           notified << [error.class, name, library, variant]
         }
@@ -86,7 +86,7 @@ RSpec.describe Glyphs::Icon do
 
     it "re-raises when the library has no fallback icon" do
       Glyphs.configure do |config|
-        config.raise_on_missing_icon = -> { false }
+        config.raise_on_missing = false
         config.fallback_icons = {}
       end
 
@@ -95,7 +95,7 @@ RSpec.describe Glyphs::Icon do
 
     it "re-raises the original error when the fallback icon is missing too" do
       Glyphs.configure do |config|
-        config.raise_on_missing_icon = -> { false }
+        config.raise_on_missing = false
         config.fallback_icons = { lucide: "also-missing" }
       end
 
