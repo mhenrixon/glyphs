@@ -1,0 +1,9 @@
+/.bundle/
+/doc/
+/pkg/
+/tmp/
+/coverage/
+*.gem
+.rspec_status
+.ruby-lsp/
+codedb.snapshot

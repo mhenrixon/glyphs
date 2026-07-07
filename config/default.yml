@@ -1,0 +1,25 @@
+Glyphs/LegacyIconHelper:
+  Description: 'Replace legacy icon helpers (_lucide, _hero, icon(), ...) with Glyphs components.'
+  Enabled: true
+  VersionAdded: '0.1.0'
+  SafeAutoCorrect: true
+  # Mappings replaces the built-in defaults when set:
+  # Mappings:
+  #   _lucide: LucideIcon
+  #   _heroicon: HeroIcon
+  DefaultLibraryComponent: HeroIcon
+
+Glyphs/IconResolution:
+  Description: 'Validate that statically-known icon names exist in the synced SVG directories.'
+  Enabled: true
+  VersionAdded: '0.1.0'
+  IconsPath: app/assets/svg/icons
+  # Libraries merges over the built-in defaults:
+  # Libraries:
+  #   PhosphorIcon: { Dir: phosphor, DefaultVariant: light }
+
+Glyphs/PreferLibraryComponent:
+  Description: 'Prefer library-specific components over generic Icon(..., library: ...).'
+  Enabled: true
+  VersionAdded: '0.1.0'
+  SafeAutoCorrect: true

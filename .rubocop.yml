@@ -1,0 +1,95 @@
+plugins:
+  - rubocop-performance
+  - rubocop-rake
+  - rubocop-rspec
+
+AllCops:
+  TargetRubyVersion: 3.2
+  NewCops: enable
+  SuggestExtensions: false
+  Exclude:
+    - spec/fixtures/**/*
+    - vendor/**/*
+
+Layout/LineLength:
+  Max: 120
+
+Layout/ArgumentAlignment:
+  EnforcedStyle: with_fixed_indentation
+
+Layout/ArrayAlignment:
+  EnforcedStyle: with_fixed_indentation
+
+Layout/CaseIndentation:
+  EnforcedStyle: end
+
+Layout/EndAlignment:
+  EnforcedStyleAlignWith: start_of_line
+
+Layout/MultilineMethodCallBraceLayout:
+  EnforcedStyle: symmetrical
+
+Style/Documentation:
+  Exclude:
+    - lib/glyphs/*_icon.rb
+    - lib/glyphs/configuration.rb
+    - lib/glyphs/version.rb
+    - lib/glyphs/rubocop.rb
+    - spec/**/*
+
+Style/StringLiterals:
+  EnforcedStyle: double_quotes
+
+# Cop messages follow RuboCop core's own %{template} token convention.
+Style/FormatStringToken:
+  EnforcedStyle: template
+
+# The cops (AST dispatch + the ported Damerau-Levenshtein fuzzy matcher) are
+# intentionally algorithmic; splitting them further would hurt readability.
+Metrics/AbcSize:
+  Exclude:
+    - lib/rubocop/**/*.rb
+
+Metrics/CyclomaticComplexity:
+  Exclude:
+    - lib/rubocop/**/*.rb
+
+Metrics/PerceivedComplexity:
+  Exclude:
+    - lib/rubocop/**/*.rb
+
+Metrics/MethodLength:
+  Max: 25
+
+Metrics/ClassLength:
+  Max: 250
+
+Metrics/BlockLength:
+  Exclude:
+    - spec/**/*
+    - "*.gemspec"
+
+RSpec/ExampleLength:
+  Enabled: false
+
+RSpec/MultipleExpectations:
+  Enabled: false
+
+RSpec/DescribeClass:
+  Exclude:
+    - spec/glyphs/kit_spec.rb
+    - spec/glyphs/register_library_spec.rb
+
+RSpec/DescribeMethod:
+  Exclude:
+    - spec/glyphs/kit_spec.rb
+
+RSpec/RemoveConst:
+  Exclude:
+    - spec/glyphs/register_library_spec.rb
+
+RSpec/SpecFilePathFormat:
+  Exclude:
+    - spec/glyphs/kit_spec.rb
+    - spec/glyphs/register_library_spec.rb
+    - spec/rubocop/plugin_spec.rb
