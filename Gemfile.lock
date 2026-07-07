@@ -3,7 +3,7 @@ PATH
   specs:
     glyphs (0.2.0)
       phlex (~> 2.0)
-      rails_icons (>= 1.2)
+      rails_icons (~> 1.2)
       zeitwerk (~> 2.6)
 
 GEM
