@@ -42,3 +42,39 @@ jobs:
           bundler-cache: true
       - name: Run specs
         run: bundle exec rspec
+
+  docs-lint:
+    runs-on: ubuntu-latest
+    name: Docs Lint
+    defaults:
+      run:
+        working-directory: docs
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 4.0
+          bundler-cache: true
+          working-directory: docs
+      - name: Run RuboCop
+        run: bundle exec rubocop
+
+  docs-test:
+    runs-on: ubuntu-latest
+    name: Docs Tests
+    defaults:
+      run:
+        working-directory: docs
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 4.0
+          bundler-cache: true
+          working-directory: docs
+      - name: Run specs
+        run: bundle exec rspec

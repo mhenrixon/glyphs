@@ -8,6 +8,7 @@ AllCops:
   NewCops: enable
   SuggestExtensions: false
   Exclude:
+    - docs/**/*
     - spec/fixtures/**/*
     - vendor/**/*
 
