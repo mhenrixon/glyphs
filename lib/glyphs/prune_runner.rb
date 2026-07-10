@@ -1,0 +1,94 @@
+# frozen_string_literal: true
+
+module Glyphs
+  # Wires configuration → SourceScanner → IconPruner and (when deleting) verifies
+  # every kept icon still resolves on disk. Thin orchestrator so the rake task is
+  # a one-liner and the whole flow is unit-testable.
+  #
+  #   Glyphs::PruneRunner.call(dry_run: false)   # scans Rails.root, prunes, verifies
+  class PruneRunner
+    # Raised when a kept icon (static ref, keep_icons, or fallback) is missing
+    # after a prune — turns a bad prune into a failed build, never a 500.
+    class VerificationError < StandardError; end
+
+    def self.call(**)
+      new(**).call
+    end
+
+    def initialize(root: default_root, icons_root: default_icons_root, dry_run: true, config: Glyphs.configuration)
+      @root = root
+      @icons_root = icons_root
+      @dry_run = dry_run
+      @config = config
+    end
+
+    def call
+      report = pruner.call
+      verify! unless @dry_run
+      report
+    end
+
+    # Asserts every kept icon resolves to a file on disk. Raises
+    # VerificationError listing the first few misses.
+    def verify!
+      missing = expected_files.reject { |path| File.exist?(path) }
+      return if missing.empty?
+
+      names = missing.first(10).map { |path| relative(path) }
+      raise VerificationError,
+        "#{missing.size} kept icon(s) missing after prune: #{names.join(', ')}"
+    end
+
+    private
+
+    attr_reader :config
+
+    def pruner
+      @pruner ||= IconPruner.new(
+        icons_root: @icons_root,
+        references:,
+        keep_icons: config.keep_icons,
+        fallback_icons: config.fallback_icons,
+        dry_run: @dry_run
+      )
+    end
+
+    def references
+      @references ||= SourceScanner.new(root: @root, **scanner_options).call
+    end
+
+    def scanner_options
+      globs = config.prune_source_globs
+      globs ? { template_globs: Array(globs) } : {}
+    end
+
+    # Files that MUST exist after a prune: every scanned reference and every
+    # configured fallback icon. keep_icons globs are advisory (they may match
+    # nothing) so they're not asserted here.
+    def expected_files
+      files = references.map { |reference| file_for(reference) }
+      config.fallback_icons.each do |library, name|
+        files << file_for(IconReference.new(library:, variant: IconReference.default_variant_for(library), name:))
+      end
+      files.uniq
+    end
+
+    def file_for(reference)
+      parts = [reference.library.to_s, reference.variant, "#{reference.name}.svg"].compact
+      File.join(@icons_root, *parts)
+    end
+
+    def relative(path)
+      path.delete_prefix("#{@icons_root}/")
+    end
+
+    def default_root
+      defined?(Rails) ? Rails.root.to_s : Dir.pwd
+    end
+
+    def default_icons_root
+      base = Icons.config.base_path
+      File.join(base.to_s, Icons.config.icons_path.to_s)
+    end
+  end
+end
