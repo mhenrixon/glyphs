@@ -28,12 +28,17 @@ module Glyphs
       deleted_names = []
 
       grouped_files.each do |(library, variant), files|
-        keep = keep_names_for(library, variant)
-        if keep.empty?
-          warn "[Glyphs::IconPruner] refusing to empty #{library}/#{variant || '.'} — no references/keep_icons/fallback"
+        # Guard on library-specific evidence of use, NOT on the merged keep-set:
+        # a flat keep_icons list is non-empty for every library, so keying the
+        # guard off keep.empty? would let it wipe an entirely-unreferenced
+        # library down to whatever the flat list happens to match.
+        unless library_used?(library)
+          warn "[Glyphs::IconPruner] refusing to prune #{library}/#{variant || '.'} — " \
+               "no references, fallback, or per-library keep_icons for #{library}"
           next
         end
 
+        keep = keep_names_for(library, variant)
         stat = prune_group(library, variant, files, keep, deleted_names)
         stats << stat
       end
@@ -108,6 +113,17 @@ module Glyphs
       when Hash then Array(@keep_icons[library] || @keep_icons[library.to_s])
       else Array(@keep_icons)
       end
+    end
+
+    # Whether a library has library-specific evidence it's in use: any scanned
+    # reference, a configured fallback, or a per-library keep_icons entry. A flat
+    # keep_icons list is deliberately NOT evidence — it applies to every library,
+    # so counting it would defeat the wipe guard for unreferenced libraries.
+    def library_used?(library)
+      return true if @references.any? { |reference| reference.library == library }
+      return true if @fallback_icons[library]
+
+      @keep_icons.is_a?(Hash) && (@keep_icons[library] || @keep_icons[library.to_s])
     end
   end
 end

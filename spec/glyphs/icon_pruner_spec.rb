@@ -92,15 +92,43 @@ RSpec.describe Glyphs::IconPruner do
       expect(exists?("animated/faded-spinner.svg")).to be(true)
     end
 
-    it "refuses to empty a library with no references and no keep_icons" do
+    it "refuses to prune a library with no references, fallback, or per-library keep_icons" do
       report = nil
       expect do
         report = prune(references: [ref(:phosphor, "regular", "lock")], fallback_icons: { phosphor: "question" })
-      end.to output(/refusing to empty lucide/).to_stderr
+      end.to output(/refusing to prune lucide/).to_stderr
 
       # lucide had no references / keep / fallback → skipped, not wiped.
       expect(exists?("lucide/outline/house.svg")).to be(true)
       expect(report.stats.map(&:library)).not_to include(:lucide)
+    end
+
+    it "does not let a flat keep_icons list defeat the wipe guard for an unreferenced library" do
+      # phosphor is referenced; lucide/heroicons are NOT. A flat (non-hash)
+      # keep_icons must not make the guard think lucide/heroicons are in use.
+      prune(
+        references: [ref(:phosphor, "regular", "lock")],
+        keep_icons: %w[lock question],
+        fallback_icons: { phosphor: "question" }
+      )
+
+      # Unreferenced libraries are skipped whole, not wiped down to matches.
+      expect(exists?("lucide/outline/house.svg")).to be(true)
+      expect(exists?("lucide/outline/circle-check.svg")).to be(true)
+      expect(exists?("heroicons/outline/check.svg")).to be(true)
+    end
+
+    it "keeps a flat keep_icons list scoping deletions WITHIN a referenced library" do
+      # lucide IS referenced, so the flat list filters within it.
+      prune(
+        references: [ref(:lucide, "outline", "house")],
+        keep_icons: %w[circle-*],
+        fallback_icons: { lucide: "circle-question-mark" }
+      )
+
+      expect(exists?("lucide/outline/house.svg")).to be(true)          # referenced
+      expect(exists?("lucide/outline/circle-check.svg")).to be(true)   # flat glob
+      expect(exists?("lucide/outline/triangle-alert.svg")).to be(false) # pruned
     end
 
     it "returns a report with accurate counts and bytes" do
