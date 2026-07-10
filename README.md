@@ -103,6 +103,55 @@ Glyphs.configure do |config|
 end
 ```
 
+## Shrinking icons in Docker
+
+`rails g rails_icons:sync` copies a library's **entire** icon set into
+`app/assets/svg/icons/<library>/<variant>/` — often thousands of SVGs, of which
+an app uses a handful. `glyphs:prune_icons` deletes the unreferenced ones so a
+Docker image ships only what it renders, while the committed repo keeps the full
+set for development.
+
+It scans your source (`app/**/*.rb`, `lib/**/*.rb` with a real parser, plus
+`.erb/.haml/.slim` text) for `LucideIcon(:house)`, legacy helpers, generic
+`Icon(:x, library: :lucide)`, and `iconify lucide--house` class strings, then
+keeps that set **plus** two safety nets: the `keep_icons` allowlist (for
+dynamic/data-driven names a static scan can't see) and every configured
+`fallback_icons` (a pruned fallback would 500 on the next missing icon).
+
+```ruby
+# config/initializers/glyphs.rb
+Glyphs.configure do |config|
+  # Icons referenced dynamically (names from config, a DB, or a gem's chrome).
+  # Flat list or per-library hash; names or fnmatch globs.
+  config.keep_icons = %w[menu palette search circle-*]
+  # config.keep_icons = { lucide: %w[menu palette], phosphor: %w[lock] }
+end
+```
+
+```bash
+# Preview (dry run — deletes nothing):
+bin/rails glyphs:prune_icons
+
+# Delete (both env vars required — a deliberate opt-in so it never fires
+# accidentally on a developer's working tree):
+PRUNE=1 GLYPHS_PRUNE_ICONS=1 bin/rails glyphs:prune_icons
+```
+
+Run it in the image build, **after** `assets:precompile` and before the final
+stage copies the app — so the deletions land in the image but never in a
+developer's checkout:
+
+```dockerfile
+RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
+RUN SECRET_KEY_BASE_DUMMY=1 PRUNE=1 GLYPHS_PRUNE_ICONS=1 ./bin/rails glyphs:prune_icons
+```
+
+After deleting, the task **verifies** every kept icon still resolves and exits
+non-zero if not — a bad prune (e.g. a missing allowlist entry) fails the build
+instead of shipping broken icons. The bundled `animated` library and any
+`custom_path` library are left untouched, and it refuses to empty a library
+whose keep-set is empty.
+
 ## RuboCop cops
 
 Add the plugin (RuboCop >= 1.72):
