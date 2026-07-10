@@ -57,6 +57,15 @@ RUN bun install --frozen-lockfile
 RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile && \
     rm -rf node_modules /usr/local/bun tmp/cache
 
+# Ship only the icons this app renders. Runs ONLY in the image build (never a
+# developer's working tree, so the committed repo keeps all ~1745 lucide icons).
+# PRUNE=1 + GLYPHS_PRUNE_ICONS=1 opt into deletion; the task then verifies every
+# kept icon (static refs + keep_icons allowlist + fallback_icons) still resolves
+# and aborts the BUILD if not — a bad prune breaks the build, never a request.
+# The final stage copies /app after this, so the deleted SVGs never ship.
+RUN SECRET_KEY_BASE_DUMMY=1 PRUNE=1 GLYPHS_PRUNE_ICONS=1 \
+    ./bin/rails glyphs:prune_icons
+
 
 # --- Final stage --------------------------------------------------------------
 FROM base
