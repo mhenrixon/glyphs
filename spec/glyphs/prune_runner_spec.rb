@@ -60,6 +60,24 @@ RSpec.describe Glyphs::PruneRunner do
     expect(report.deleted_count).to be > 0
   end
 
+  it "keeps scanning templates when prune_source_globs adds extra locations" do
+    # Referenced in a template AND an extra scanned location; the default
+    # template scan must NOT be dropped when prune_source_globs is set.
+    write_source("app/views/foo.html.erb", "<%= render LucideIcon(:house) %>")
+    write_source("config/icons.yml", "badge: \"iconify lucide--circle-check\"")
+    Glyphs.configure do |config|
+      config.fallback_icons = { lucide: "circle-question-mark" }
+      config.keep_icons = []
+      config.prune_source_globs = ["config/**/*.yml"]
+    end
+
+    run
+
+    expect(exists?("lucide/outline/house.svg")).to be(true)         # template default still scanned
+    expect(exists?("lucide/outline/circle-check.svg")).to be(true)  # from the extra yml location
+    expect(exists?("lucide/outline/triangle-alert.svg")).to be(false)
+  end
+
   describe "#verify!" do
     it "raises when a kept icon is missing after pruning" do
       write_source("app/components/demo.rb", "LucideIcon(:house)")

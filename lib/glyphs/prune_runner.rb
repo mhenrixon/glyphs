@@ -59,7 +59,7 @@ module Glyphs
 
     def scanner_options
       globs = config.prune_source_globs
-      globs ? { template_globs: Array(globs) } : {}
+      globs ? { extra_globs: Array(globs) } : {}
     end
 
     # Files that MUST exist after a prune: every scanned reference and every
