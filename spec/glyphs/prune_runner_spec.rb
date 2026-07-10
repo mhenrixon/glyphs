@@ -79,5 +79,15 @@ RSpec.describe Glyphs::PruneRunner do
 
       expect { runner.verify! }.not_to raise_error
     end
+
+    it "ignores fallbacks for libraries that aren't synced on disk" do
+      # Configure a fallback for tabler, which has no directory under icons_root.
+      Glyphs.configure { |config| config.fallback_icons = { lucide: "circle-question-mark", tabler: "help" } }
+      write_source("app/components/demo.rb", "LucideIcon(:house)")
+      runner = described_class.new(root:, icons_root:, dry_run: false)
+      runner.call
+
+      expect { runner.verify! }.not_to raise_error
+    end
   end
 end

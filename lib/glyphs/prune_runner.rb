@@ -63,14 +63,23 @@ module Glyphs
     end
 
     # Files that MUST exist after a prune: every scanned reference and every
-    # configured fallback icon. keep_icons globs are advisory (they may match
-    # nothing) so they're not asserted here.
+    # configured fallback icon, restricted to libraries actually synced under
+    # icons_root (the pruner only touches those — a fallback for an un-synced
+    # library is irrelevant and must not fail the build). keep_icons globs are
+    # advisory (they may match nothing), so they're not asserted here.
     def expected_files
-      files = references.map { |reference| file_for(reference) }
-      config.fallback_icons.each do |library, name|
-        files << file_for(IconReference.new(library:, variant: IconReference.default_variant_for(library), name:))
+      fallback_refs = config.fallback_icons.map do |library, name|
+        IconReference.new(library:, variant: IconReference.default_variant_for(library), name:)
       end
-      files.uniq
+
+      (references.to_a + fallback_refs)
+        .select { |reference| library_present?(reference.library) }
+        .map { |reference| file_for(reference) }
+        .uniq
+    end
+
+    def library_present?(library)
+      Dir.exist?(File.join(@icons_root, library.to_s))
     end
 
     def file_for(reference)
