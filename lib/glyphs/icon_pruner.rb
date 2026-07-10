@@ -123,7 +123,9 @@ module Glyphs
       return true if @references.any? { |reference| reference.library == library }
       return true if @fallback_icons[library]
 
-      @keep_icons.is_a?(Hash) && (@keep_icons[library] || @keep_icons[library.to_s])
+      # A per-library keep_icons entry counts only if it actually lists icons —
+      # an empty array (`{ tabler: [] }`) is not evidence of use.
+      @keep_icons.is_a?(Hash) && keep_icons_for(library).any?
     end
   end
 end

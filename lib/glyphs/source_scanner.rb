@@ -26,12 +26,17 @@ module Glyphs
         IconReference::LEGACY_HELPERS.keys +
         %w[Icon icon]
     ).freeze
+    # The tail runs to the end of the line or the ERB/Slim tag close (`%>`,
+    # `-%>`) — NOT to the first `)`, which would truncate `variant:`/`from:` sitting
+    # after a nested call like `class: cn("a")`. Over-capturing the tail only ever
+    # ADDS a keep (never drops a reference), so it errs safe.
     TEMPLATE_CALL_PATTERN = /
       \b(#{Regexp.union(TEMPLATE_CALL_NAMES)})
       \(?\s*[:"']([a-z0-9_-]+)['"]?      # first arg is a literal symbol or string
-      ([^)\n]*)                          # argument tail up to the closing paren
+      ([^\n]*?)                          # argument tail (rest of the logical line)
+      (?=-?%>|\n|\z)
     /x
-    TEMPLATE_VARIANT_PATTERN = /\bvariant:\s*[:"']([a-z0-9_.-]+)/
+    TEMPLATE_VARIANT_PATTERN = /\bvariant:\s*[:"']?([a-z0-9_.-]*)/
     TEMPLATE_LIBRARY_PATTERN = /\b(?:library|from):\s*[:"']([a-z0-9_-]+)/
     GENERIC_TEMPLATE_CALLS = %w[Icon icon].freeze
 
@@ -92,14 +97,20 @@ module Glyphs
       library = template_library(method_name, tail)
       return unless library
 
-      variant_match = tail.match(TEMPLATE_VARIANT_PATTERN)
-      variant = variant_match && IconReference.normalize_variant(variant_match[1])
-
       references << IconReference.new(
         library:,
-        variant: variant || IconReference.default_variant_for(library),
+        variant: template_variant(tail, library),
         name: name.to_s.tr("_", "-")
       )
+    end
+
+    # A present-but-empty `variant:` (`variant: ""` / `variant: :"."`) means
+    # no-variant — mirror the AST path: default ONLY when the keyword is absent.
+    def template_variant(tail, library)
+      match = tail.match(TEMPLATE_VARIANT_PATTERN)
+      return IconReference.default_variant_for(library) unless match
+
+      IconReference.normalize_variant(match[1])
     end
 
     def template_library(method_name, tail)

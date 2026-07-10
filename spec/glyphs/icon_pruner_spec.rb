@@ -118,6 +118,18 @@ RSpec.describe Glyphs::IconPruner do
       expect(exists?("heroicons/outline/check.svg")).to be(true)
     end
 
+    it "treats an empty per-library keep_icons array as no evidence of use" do
+      # { lucide: [] } must not bypass the wipe guard for an unreferenced lucide.
+      prune(
+        references: [ref(:phosphor, "regular", "lock")],
+        keep_icons: { lucide: [] },
+        fallback_icons: { phosphor: "question" }
+      )
+
+      expect(exists?("lucide/outline/house.svg")).to be(true)
+      expect(exists?("lucide/outline/circle-check.svg")).to be(true)
+    end
+
     it "keeps a flat keep_icons list scoping deletions WITHIN a referenced library" do
       # lucide IS referenced, so the flat list filters within it.
       prune(

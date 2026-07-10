@@ -97,6 +97,14 @@ RSpec.describe Glyphs::SourceScanner do
           ref(:heroicons, "solid", "bell")           # icon("bell", library: "heroicons", variant: "solid")
         )
       end
+
+      it "reads variant:/from: past a nested method call in the argument tail" do
+        # icon("save", class: cn("a", active?), from: :lucide) — the nested cn()
+        # paren must not truncate the tail before from:.
+        expect(references).to include(ref(:lucide, "outline", "save"))
+        # PhosphorIcon(:lock, class: cn("b"), variant: :bold) — variant past nested paren.
+        expect(references).to include(ref(:phosphor, "bold", "lock"))
+      end
     end
 
     context "with the variant-less '.' convention" do
