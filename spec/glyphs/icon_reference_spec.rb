@@ -55,9 +55,37 @@ RSpec.describe Glyphs::IconReference do
     end
   end
 
+  describe ".normalize_variant" do
+    it "passes a real variant through" do
+      expect(described_class.normalize_variant("solid")).to eq("solid")
+    end
+
+    it "normalizes an empty string to nil (the flat-layout override)" do
+      expect(described_class.normalize_variant("")).to be_nil
+    end
+
+    it "normalizes '.' to nil (the variant-less convention)" do
+      expect(described_class.normalize_variant(".")).to be_nil
+    end
+
+    it "normalizes a symbol variant to a string" do
+      expect(described_class.normalize_variant(:solid)).to eq("solid")
+    end
+
+    it "returns nil for nil" do
+      expect(described_class.normalize_variant(nil)).to be_nil
+    end
+  end
+
   describe ".default_variant_for" do
     it "reads the phosphor default variant from the icons gem" do
       expect(described_class.default_variant_for(:phosphor)).to eq("regular")
+    end
+
+    it "normalizes an empty-string configured default to nil" do
+      allow(Icons.config.libraries[:lucide]).to receive(:default_variant).and_return("")
+
+      expect(described_class.default_variant_for(:lucide)).to be_nil
     end
 
     it "reads the lucide default variant from the icons gem" do

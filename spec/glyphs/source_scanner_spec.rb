@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+require "tmpdir"
+require "fileutils"
+
 RSpec.describe Glyphs::SourceScanner do
   let(:root) { File.expand_path("../fixtures/source", __dir__) }
 
@@ -78,6 +81,34 @@ RSpec.describe Glyphs::SourceScanner do
           ref(:lucide, "outline", "house"),
           ref(:phosphor, "regular", "lock")
         )
+      end
+
+      it "records the explicit variant on a template component call" do
+        # HeroIcon(:check, variant: :solid) in .erb must resolve to solid, not
+        # the default outline — else the solid file gets pruned. (outline/check
+        # is also present via _hero(:check) in the Ruby fixture, so only assert
+        # the solid tuple is captured.)
+        expect(references).to include(ref(:heroicons, "solid", "check"))
+      end
+
+      it "records the generic icon helper with from:/library: in a template" do
+        expect(references).to include(
+          ref(:lucide, "outline", "gauge"),          # icon "gauge", from: :lucide
+          ref(:heroicons, "solid", "bell")           # icon("bell", library: "heroicons", variant: "solid")
+        )
+      end
+    end
+
+    context "with the variant-less '.' convention" do
+      it "normalizes variant: :\".\" to no-variant so the flat file is kept" do
+        Dir.mktmpdir do |dir|
+          FileUtils.mkdir_p(File.join(dir, "app"))
+          File.write(File.join(dir, "app/dot.rb"), 'LucideIcon(:house, variant: :".")')
+          refs = described_class.new(root: dir).call
+
+          expect(refs).to include(ref(:lucide, nil, "house"))
+          expect(refs).not_to include(ref(:lucide, ".", "house"))
+        end
       end
     end
 

@@ -15,26 +15,40 @@ module Glyphs
     DEFAULT_RUBY_GLOBS = ["app/**/*.rb", "lib/**/*.rb"].freeze
     DEFAULT_TEMPLATE_GLOBS = ["app/**/*.erb", "app/**/*.haml", "app/**/*.slim"].freeze
 
-    # `LucideIcon(:house` / `_lucide(:house` — component or legacy-helper call
-    # with a literal symbol/string first argument. Used for template text scans.
+    # Template (.erb/.haml/.slim) text scanning. Prism can't parse these, so we
+    # match icon calls textually: the method, the literal first-argument name,
+    # and the argument tail (to pull out `variant:` and, for the generic
+    # `icon`/`Icon` helper, `library:`/`from:`). `Icon`/`icon` are included here
+    # (they're handled by the AST visitor for .rb files) so the generic
+    # rails_icons view helper is caught in templates too.
     TEMPLATE_CALL_NAMES = (
-      IconReference::LIBRARY_TO_COMPONENT.values + IconReference::LEGACY_HELPERS.keys
+      IconReference::LIBRARY_TO_COMPONENT.values +
+        IconReference::LEGACY_HELPERS.keys +
+        %w[Icon icon]
     ).freeze
     TEMPLATE_CALL_PATTERN = /
       \b(#{Regexp.union(TEMPLATE_CALL_NAMES)})
-      \(\s*[:"']([a-z0-9_-]+)
+      \(?\s*[:"']([a-z0-9_-]+)['"]?      # first arg is a literal symbol or string
+      ([^)\n]*)                          # argument tail up to the closing paren
     /x
+    TEMPLATE_VARIANT_PATTERN = /\bvariant:\s*[:"']([a-z0-9_.-]+)/
+    TEMPLATE_LIBRARY_PATTERN = /\b(?:library|from):\s*[:"']([a-z0-9_-]+)/
+    GENERIC_TEMPLATE_CALLS = %w[Icon icon].freeze
 
-    def initialize(root:, ruby_globs: DEFAULT_RUBY_GLOBS, template_globs: DEFAULT_TEMPLATE_GLOBS)
+    # `extra_globs` are additional locations to text-scan on top of the built-in
+    # Ruby and template defaults (never replacing them) — e.g. a config file that
+    # names icons. They're scanned like templates (regex, not AST).
+    def initialize(root:, ruby_globs: DEFAULT_RUBY_GLOBS, template_globs: DEFAULT_TEMPLATE_GLOBS, extra_globs: [])
       @root = root
       @ruby_globs = ruby_globs
       @template_globs = template_globs
+      @extra_globs = Array(extra_globs)
     end
 
     def call
       references = Set.new
       ruby_files.each { |path| scan_ruby(path, references) }
-      template_files.each { |path| scan_template(path, references) }
+      (template_files - ruby_files).each { |path| scan_template(path, references) }
       references
     end
 
@@ -47,7 +61,7 @@ module Glyphs
     end
 
     def template_files
-      glob(@template_globs)
+      glob(@template_globs + @extra_globs)
     end
 
     def glob(patterns)
@@ -64,11 +78,35 @@ module Glyphs
     def scan_template(path, references)
       text = File.read(path)
       scan_iconify(text, references)
-      text.scan(TEMPLATE_CALL_PATTERN) do |method_name, name|
-        add_call(references, method_name, name, nil)
+      text.scan(TEMPLATE_CALL_PATTERN) do |method_name, name, tail|
+        add_template_call(references, method_name, name, tail)
       end
     rescue StandardError => e
       warn "[Glyphs::SourceScanner] skipped #{path}: #{e.class}: #{e.message}"
+    end
+
+    # Records a template icon call, reading `variant:` (and, for the generic
+    # icon/Icon helper, `library:`/`from:`) out of the captured argument tail so
+    # a variant-bearing template call resolves to the same file it renders.
+    def add_template_call(references, method_name, name, tail)
+      library = template_library(method_name, tail)
+      return unless library
+
+      variant_match = tail.match(TEMPLATE_VARIANT_PATTERN)
+      variant = variant_match && IconReference.normalize_variant(variant_match[1])
+
+      references << IconReference.new(
+        library:,
+        variant: variant || IconReference.default_variant_for(library),
+        name: name.to_s.tr("_", "-")
+      )
+    end
+
+    def template_library(method_name, tail)
+      return IconReference.library_for(method_name) unless GENERIC_TEMPLATE_CALLS.include?(method_name)
+
+      match = tail.match(TEMPLATE_LIBRARY_PATTERN)
+      match && match[1].to_sym
     end
 
     def scan_iconify(text, references)
@@ -76,19 +114,6 @@ module Glyphs
         library = library.to_sym
         references << IconReference.new(library:, variant: IconReference.default_variant_for(library), name:)
       end
-    end
-
-    # Adds a reference for a `Component(name, variant:)` / legacy-helper call.
-    # `variant` is a resolved string, or nil to use the library default.
-    def add_call(references, method_name, name, variant)
-      library = IconReference.library_for(method_name)
-      return unless library
-
-      references << IconReference.new(
-        library:,
-        variant: variant || IconReference.default_variant_for(library),
-        name: name.to_s.tr("_", "-")
-      )
     end
 
     # Walks the Prism AST collecting icon references from call nodes.
@@ -154,7 +179,9 @@ module Glyphs
         return IconReference.default_variant_for(library) unless value_node
 
         value = literal_symbol_or_string(value_node)
-        value || :dynamic
+        return :dynamic unless value
+
+        IconReference.normalize_variant(value)
       end
 
       def first_argument(node)

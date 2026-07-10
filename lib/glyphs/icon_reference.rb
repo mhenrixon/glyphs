@@ -68,10 +68,23 @@ module Glyphs
       # string (`"outline"`), or nil for variant-less libraries.
       def default_variant_for(library)
         options = Icons.config.libraries[library.to_sym]
-        variant = options&.default_variant
-        variant&.to_s
+        normalize_variant(options&.default_variant)
       rescue StandardError
         nil
+      end
+
+      # Mirrors the icons gem's variant→path handling so a scanned reference
+      # points at the same file that renders: an empty string (a documented
+      # rails_icons override) and `"."` (the variant-less convention) both mean
+      # "no variant subdirectory" and normalize to nil. See the icons gem's
+      # Icons::Icon::Configurable#set_variant and Icons::Icon::FilePath#parts.
+      def normalize_variant(variant)
+        return if variant.nil?
+
+        string = variant.to_s
+        return if string.empty? || string == "."
+
+        string
       end
     end
   end
