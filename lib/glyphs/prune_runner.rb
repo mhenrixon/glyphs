@@ -47,14 +47,47 @@ module Glyphs
       @pruner ||= IconPruner.new(
         icons_root: @icons_root,
         references:,
-        keep_icons: config.keep_icons,
+        keep_icons: keep_icons,
         fallback_icons: config.fallback_icons,
         dry_run: @dry_run
       )
     end
 
+    def scanner
+      @scanner ||= SourceScanner.new(root: @root, **scanner_options)
+    end
+
     def references
-      @references ||= SourceScanner.new(root: @root, **scanner_options).call
+      @references ||= scanner.call
+    end
+
+    # The pruner's keep-set: the configured keep_icons MERGED with the scanner's
+    # advisory per-library dynamic keeps (names harvested from dynamic call
+    # sites). Both are advisory — kept if present, never asserted by verify!.
+    #
+    # With no dynamic keeps, the configured value passes straight through (flat
+    # list or hash — the pruner accepts both). Otherwise everything folds into a
+    # per-library hash; a flat configured list applies to every kept library.
+    def keep_icons
+      dynamic = scanner.dynamic_keeps
+      return config.keep_icons if dynamic.empty?
+
+      merged = Hash.new { |hash, key| hash[key] = [] }
+      dynamic.each { |library, names| merged[library].concat(names.to_a) }
+      merge_configured_keeps(merged)
+      merged.transform_values(&:uniq)
+    end
+
+    # Folds the configured keep_icons into the per-library `merged` hash: a hash
+    # merges per library; a flat list applies to every library already present.
+    def merge_configured_keeps(merged)
+      case config.keep_icons
+      when Hash
+        config.keep_icons.each { |library, names| merged[library.to_sym].concat(Array(names)) }
+      else
+        flat = Array(config.keep_icons)
+        merged.each_key { |library| merged[library].concat(flat) }
+      end
     end
 
     def scanner_options

@@ -114,14 +114,41 @@ set for development.
 It scans your source (`app/**/*.rb`, `lib/**/*.rb` with a real parser, plus
 `.erb/.haml/.slim` text) for `LucideIcon(:house)`, legacy helpers, generic
 `Icon(:x, library: :lucide)`, and `iconify lucide--house` class strings, then
-keeps that set **plus** two safety nets: the `keep_icons` allowlist (for
-dynamic/data-driven names a static scan can't see) and every configured
-`fallback_icons` (a pruned fallback would 500 on the next missing icon).
+keeps that set **plus** two safety nets: the `keep_icons` allowlist and every
+configured `fallback_icons` (a pruned fallback would 500 on the next missing
+icon).
+
+### Dynamic calls are resolved automatically
+
+Most apps render most icons dynamically — `LucideIcon(tile[:icon])`,
+`PhosphorIcon(notification.icon)` — where the name lives in a `{ icon: :activity }`
+hash, a `CHANNEL_ICONS` map, or an `ICON = :bell` constant, sometimes in a
+different file from the render. A naïve static scan can't read those names and
+would prune the icons they use.
+
+The scanner resolves them from source, so you rarely need `keep_icons` at all:
+
+- **File-scoped** — a file that renders a library dynamically (`LucideIcon(x)`)
+  keeps every icon-name-shaped literal in that file for that library. Catches
+  ternaries (`@open ? "caret-up" : "caret-down"`), `case/when`, and locals.
+- **Declaration-based** — literals in icon-declaration positions *anywhere* — a
+  hash pair keyed like an icon (`icon: :gear`, `menu_icon: "house"`) or a
+  constant named like one (`ICON = :bell`, `STATUS_ICONS = { .. => :warning }`) —
+  are kept for every dynamically-rendered library, so a name declared in one
+  file and rendered from another survives.
+
+Only literals are harvested, so the scanner never invents a reference; the
+worst case is keeping a coincidentally icon-named string, which the post-prune
+verification tolerates.
+
+### `keep_icons` — the last-resort escape hatch
+
+For names a static scan genuinely can't see — read from a database, an ENV var,
+or a gem's own chrome — list them explicitly:
 
 ```ruby
 # config/initializers/glyphs.rb
 Glyphs.configure do |config|
-  # Icons referenced dynamically (names from config, a DB, or a gem's chrome).
   # Flat list or per-library hash; names or fnmatch globs.
   config.keep_icons = %w[menu palette search circle-*]
   # config.keep_icons = { lucide: %w[menu palette], phosphor: %w[lock] }

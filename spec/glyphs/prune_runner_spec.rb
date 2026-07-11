@@ -51,6 +51,44 @@ RSpec.describe Glyphs::PruneRunner do
     expect(exists?("lucide/outline/circle-check.svg")).to be(false)  # pruned
   end
 
+  it "keeps an icon named only at a dynamic call site (file-scoped harvest)" do
+    # `circle-check` is never a literal icon-call argument — it's a local that
+    # feeds a dynamic LucideIcon call. The scanner harvests it as an advisory
+    # keep, so the pruner must not delete it.
+    write_source("app/components/demo.rb", <<~RUBY)
+      class Demo
+        def view_template
+          LucideIcon(:house)
+          name = :circle_check
+          LucideIcon(name)
+        end
+      end
+    RUBY
+
+    run
+
+    expect(exists?("lucide/outline/circle-check.svg")).to be(true) # dynamic keep
+    expect(exists?("lucide/outline/house.svg")).to be(true)        # confirmed ref
+  end
+
+  it "does not fail verification when a harvested literal is not a real icon" do
+    # A file with a dynamic lucide call also contains a non-icon literal
+    # ("not-a-real-icon"). It's harvested as an advisory keep, but since no such
+    # SVG exists, verification must NOT assert it — advisory keeps are best-effort.
+    write_source("app/components/demo.rb", <<~RUBY)
+      class Demo
+        CSS_CLASS = "not-a-real-icon"
+        def view_template
+          LucideIcon(:house)
+          LucideIcon(icon_name)
+        end
+      end
+    RUBY
+
+    expect { run }.not_to raise_error
+    expect(exists?("lucide/outline/house.svg")).to be(true)
+  end
+
   it "returns a report" do
     write_source("app/components/demo.rb", "LucideIcon(:house)")
 

@@ -52,11 +52,50 @@ RSpec.describe Glyphs::SourceScanner do
       end
     end
 
-    context "with dynamic references" do
-      it "skips a dynamic icon name" do
+    context "with dynamic references resolved from source" do
+      subject(:keeps) { described_class.new(root:).dynamic_keeps }
+
+      # Harvested names are ADVISORY keeps, not confirmed references — they never
+      # appear in #call (which feeds verification) and never carry a variant
+      # (the pruner keeps them across the library's default variant).
+      it "does not leak harvested names into the confirmed reference set" do
         expect(references).not_to include(ref(:lucide, "outline", "zap"))
       end
 
+      # `status = :zap; LucideIcon(status)` — the name is a literal in the same
+      # file as a dynamic lucide call, so file-scoped harvesting keeps it for lucide.
+      it "keeps a file-local literal for the dynamically-rendered library" do
+        expect(keeps[:lucide]).to include("zap")
+      end
+
+      # `tiles = [{ icon: :feather }, { icon: "gear" }]; PhosphorIcon(tile[:icon])`
+      # — `icon:` hash values are icon-declaration positions kept for phosphor.
+      it "keeps icon: hash literals for a dynamically-rendered library" do
+        expect(keeps[:phosphor]).to include("feather", "gear")
+      end
+
+      # `ICON = :bell_ringing` in sample_notifier.rb, rendered dynamically from a
+      # different file. Declaration-based harvesting is global, so an ICON
+      # constant anywhere is kept for every dynamically-rendered library.
+      it "keeps an ICON constant declared in another file" do
+        expect(keeps[:phosphor]).to include("bell-ringing")
+      end
+
+      # A library with no dynamic call gets no dynamic keeps — heroicons here is
+      # only ever called with literal names, so declaration literals don't leak
+      # into it.
+      it "does not create dynamic keeps for a statically-only library" do
+        expect(keeps).not_to have_key(:heroicons)
+      end
+
+      # Guard against over-keeping across files: a bare literal in a file with no
+      # dynamic icon call, not in a declaration position, is not harvested.
+      it "does not harvest unrelated literals from files without dynamic calls" do
+        expect(keeps.values.flat_map(&:to_a)).not_to include("definitely-not-an-icon")
+      end
+    end
+
+    context "with dynamic references" do
       it "does not record a reference with a dynamic variant" do
         heroicons = references.select { |r| r.library == :heroicons && r.name == "check" }
 
