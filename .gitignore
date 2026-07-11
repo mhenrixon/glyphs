@@ -7,3 +7,9 @@
 .rspec_status
 .ruby-lsp/
 codedb.snapshot
+
+# Claude Code: per-developer local settings and transient agent state.
+# The shared commands/rules/settings.json ARE checked in.
+.claude/settings.local.json
+.claude/worktrees/
+.claude/scheduled_tasks.lock

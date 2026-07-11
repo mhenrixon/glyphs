@@ -1,5 +1,24 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- **Dynamic icon calls are now resolved from source.** `SourceScanner` no longer
+  silently skips `LucideIcon(some_var)` / `PhosphorIcon(tile[:icon])` — it harvests
+  the literal name from two places so the pruner keeps it:
+  - _file-scoped_: a file that dynamically renders a library keeps every
+    icon-name-shaped literal in that file for that library (ternaries, `case`,
+    locals);
+  - _declaration-based_: literals in icon-declaration positions anywhere (a hash
+    pair keyed `/icon/i`, or a constant named `/ICON/`) are kept for every
+    dynamically-rendered library, closing the cross-file gap (e.g. a notifier
+    `ICON = :bell` constant rendered from a view).
+
+  This makes `keep_icons` a last-resort escape hatch (DB/ENV/gem-chrome names)
+  rather than the primary mechanism. Only literals are harvested, so the scanner
+  never invents a reference.
+
 ## [0.2.0] - 2026-07-07
 
 ### Changed
