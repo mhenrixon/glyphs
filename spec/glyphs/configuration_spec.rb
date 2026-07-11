@@ -23,6 +23,30 @@ RSpec.describe Glyphs::Configuration do
     it "caches svgs" do
       expect(configuration.cache_svgs).to be(true)
     end
+
+    it "keeps no extra icons by default" do
+      expect(configuration.keep_icons).to eq([])
+    end
+
+    it "has no extra prune source globs by default" do
+      expect(configuration.prune_source_globs).to be_nil
+    end
+  end
+
+  describe "prune settings" do
+    subject(:configuration) { described_class.new }
+
+    it "accepts a flat keep_icons list" do
+      configuration.keep_icons = %w[menu palette]
+
+      expect(configuration.keep_icons).to eq(%w[menu palette])
+    end
+
+    it "accepts a per-library keep_icons hash" do
+      configuration.keep_icons = { lucide: %w[menu], phosphor: %w[lock] }
+
+      expect(configuration.keep_icons).to eq(lucide: %w[menu], phosphor: %w[lock])
+    end
   end
 
   describe "Glyphs.configure" do

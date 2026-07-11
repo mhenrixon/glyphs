@@ -11,7 +11,14 @@ loader.ignore("#{__dir__}/glyphs/version.rb")
 # RuboCop process (see the bottom of this file).
 loader.ignore("#{__dir__}/glyphs/rubocop.rb")
 loader.ignore("#{__dir__}/rubocop")
+# The Railtie is required conditionally below (only under Rails), and the rake
+# tasks aren't Ruby constants — keep both out of Zeitwerk's managed set.
+loader.ignore("#{__dir__}/glyphs/railtie.rb")
+loader.ignore("#{__dir__}/tasks")
 loader.setup
+
+# Expose the icon-pruning rake task to consuming Rails apps.
+require_relative "glyphs/railtie" if defined?(Rails::Railtie)
 
 # Ensure the icons gem is configured even outside Rails. Inside Rails the
 # rails_icons engine calls `Icons.configure` with the app's settings; the

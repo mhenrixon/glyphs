@@ -20,4 +20,5 @@ class Doc
   page "Custom libraries", group: "Guide"
   page "Migration", group: "Guide"
   page "RuboCop cops", group: "Reference", slug: "rubocop-cops", view: "RubocopCops"
+  page "Shrinking icons in Docker", group: "Guide"
 end

@@ -7,9 +7,10 @@ gem "phlex-rails"
 gem "rails_icons", "~> 1.1"
 gem "rouge"
 
-# The documented gem itself — version badge + live component demos. Only the
-# version constant is required at boot.
-gem "glyphs", path: "..", require: "glyphs/version"
+# The documented gem itself — version badge + live component demos. Required in
+# full at boot so its Railtie registers `glyphs:prune_icons` (the Docker-build
+# icon prune) and `Glyphs.configure` is available to config/initializers/glyphs.rb.
+gem "glyphs", path: ".."
 
 # Optional: expose these docs to AI agents over MCP (a read-only /mcp endpoint).
 # Uncomment this and the /mcp route in config/routes.rb. See the docs-kit README.

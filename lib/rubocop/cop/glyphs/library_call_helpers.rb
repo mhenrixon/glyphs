@@ -9,21 +9,10 @@ module RuboCop
       module LibraryCallHelpers
         LIBRARY_KEYS = %i[library from].freeze
 
-        LIBRARY_TO_COMPONENT = {
-          "lucide" => "LucideIcon",
-          "phosphor" => "PhosphorIcon",
-          "heroicons" => "HeroIcon",
-          "tabler" => "TablerIcon",
-          "feather" => "FeatherIcon",
-          "boxicons" => "BoxIcon",
-          "flags" => "FlagIcon",
-          "hugeicons" => "HugeIcon",
-          "linear" => "LinearIcon",
-          "radix" => "RadixIcon",
-          "sidekickicons" => "SidekickIcon",
-          "weather" => "WeatherIcon",
-          "animated" => "AnimatedIcon"
-        }.freeze
+        # Library name string => component name, keyed by the icons-gem library
+        # name (`"lucide"`). Derived from the canonical map in
+        # `Glyphs::IconReference` so the cops and the icon pruner never drift.
+        LIBRARY_TO_COMPONENT = ::Glyphs::IconReference::LIBRARY_TO_COMPONENT.transform_keys(&:to_s).freeze
 
         private
 
