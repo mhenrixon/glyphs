@@ -133,9 +133,9 @@ The scanner resolves them from source, so you rarely need `keep_icons` at all:
   ternaries (`@open ? "caret-up" : "caret-down"`), `case/when`, and locals.
 - **Declaration-based** — literals in icon-declaration positions *anywhere* — a
   hash pair keyed like an icon (`icon: :gear`, `menu_icon: "house"`) or a
-  constant named like one (`ICON = :bell`, `STATUS_ICONS = { .. => :warning }`) —
-  are kept for every dynamically-rendered library, so a name declared in one
-  file and rendered from another survives.
+  constant named like one (`ICON = :bell`, `STATUS_ICONS = { .. => :warning }`,
+  including trailing `.freeze`) — are kept for every dynamically-rendered
+  library, so a name declared in one file and rendered from another survives.
 
 Only literals are harvested, so the scanner never invents a reference; the
 worst case is keeping a coincidentally icon-named string, which the post-prune

@@ -81,6 +81,19 @@ RSpec.describe Glyphs::SourceScanner do
         expect(keeps[:phosphor]).to include("bell-ringing")
       end
 
+      # `ICONS = { "driving_license" => :car, … }.freeze` in frozen_icons_map.rb,
+      # rendered via PhosphorIcon(@icon) in selectable_row.rb. Without unwrapping
+      # the trailing `.freeze` CallNode, declaration harvest sees nothing and
+      # cross-file dynamics prune those SVGs (production Icons::IconNotFound).
+      it "keeps ICON* hash and array values even when the constant is .freeze'd" do
+        expect(keeps[:phosphor]).to include(
+          "car",
+          "identification-badge",
+          "warning",
+          "check-circle"
+        )
+      end
+
       # A library with no dynamic call gets no dynamic keeps — heroicons here is
       # only ever called with literal names, so declaration literals don't leak
       # into it.

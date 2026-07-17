@@ -346,7 +346,11 @@ module Glyphs
 
       # Harvests icon names from a declaration value: a bare literal, an array of
       # literals (`ICON = %i[a b]`), or a hash's values (`{ "sms" => :device }`).
+      # Trailing `.freeze` is unwrapped so `ICONS = { … }.freeze` still harvests —
+      # without this, cross-file dynamics (`PhosphorIcon(@icon)` + names only in a
+      # frozen `ICONS` hash) lose those names at prune.
       def collect_declaration(value_node)
+        value_node = unwrap_declaration_wrappers(value_node)
         case value_node
         when Prism::SymbolNode, Prism::StringNode
           collect_literal(@declaration_literals, value_node)
@@ -355,6 +359,37 @@ module Glyphs
         when Prism::HashNode
           value_node.elements.grep(Prism::AssocNode).each { |assoc| collect_declaration(assoc.value) }
         end
+      end
+
+      # Peel zero-arg `.freeze` and parentheses so the underlying Hash/Array/literal
+      # is what declaration harvest walks.
+      def unwrap_declaration_wrappers(value_node)
+        loop do
+          case value_node
+          when Prism::CallNode
+            break unless freeze_call?(value_node)
+
+            value_node = value_node.receiver
+          when Prism::ParenthesesNode
+            value_node = value_node.body
+          when Prism::StatementsNode
+            # `(expr)` → StatementsNode with one child; multi-statement bodies are
+            # not valid constant values, so take the sole statement when present.
+            break unless value_node.body.size == 1
+
+            value_node = value_node.body.first
+          else
+            break
+          end
+        end
+        value_node
+      end
+
+      # `receiver.freeze` with no args — the common immutable-constant pattern.
+      def freeze_call?(node)
+        node.name == :freeze &&
+          node.receiver &&
+          (node.arguments.nil? || node.arguments.arguments.empty?)
       end
     end
   end
