@@ -14,9 +14,10 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
+        # Must match gemspec required_ruby_version (>= 3.4) and CI gem-test matrix.
         ruby:
-          - "3.3"
           - "3.4"
+          - "4.0"
 
     steps:
       - uses: actions/checkout@v4
