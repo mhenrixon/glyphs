@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- **Declaration harvest unwraps trailing `.freeze`.** `ICONS = { "x" => :car }.freeze`
+  (and `%i[a b].freeze`) used to yield a Prism `CallNode`, so hash/array values
+  were never collected. Cross-file dynamics (`PhosphorIcon(@icon)` in a shared
+  component + names only in a frozen `ICONS` map) then lost those icons at
+  `glyphs:prune_icons`. `collect_declaration` now unwraps zero-arg `.freeze`
+  (and parentheses) before walking the value.
+
 ### Added
 
 - **Dynamic icon calls are now resolved from source.** `SourceScanner` no longer
@@ -13,7 +22,8 @@
   - _declaration-based_: literals in icon-declaration positions anywhere (a hash
     pair keyed `/icon/i`, or a constant named `/ICON/`) are kept for every
     dynamically-rendered library, closing the cross-file gap (e.g. a notifier
-    `ICON = :bell` constant rendered from a view).
+    `ICON = :bell` constant rendered from a view). Frozen maps
+    (`ICONS = { … }.freeze`) are included — see Fixed above.
 
   This makes `keep_icons` a last-resort escape hatch (DB/ENV/gem-chrome names)
   rather than the primary mechanism. Only literals are harvested, so the scanner
