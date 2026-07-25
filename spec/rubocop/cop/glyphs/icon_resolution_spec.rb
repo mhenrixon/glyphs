@@ -4,6 +4,10 @@ RSpec.describe RuboCop::Cop::Glyphs::IconResolution, :config do
   let(:config) { RuboCop::Config.new("Glyphs/IconResolution" => cop_config) }
   let(:cop_config) { { "IconsPath" => "spec/fixtures/svg/icons" } }
 
+  # The missing-directory warning is deduplicated for the whole process (RuboCop
+  # builds a fresh cop instance per file), so examples must not inherit it.
+  before { described_class.reset_warnings! }
+
   context "with component calls" do
     it "accepts icons that exist" do
       expect_no_offenses(<<~RUBY)
@@ -127,11 +131,48 @@ RSpec.describe RuboCop::Cop::Glyphs::IconResolution, :config do
     end
   end
 
-  context "when the icons path does not exist" do
+  context "when the icons directory does not exist" do
     let(:cop_config) { { "IconsPath" => "spec/fixtures/nope" } }
 
-    it "reports nothing" do
-      expect_no_offenses("LucideIcon(:anything_at_all)")
+    it "warns instead of silently validating nothing" do
+      expect { expect_no_offenses("LucideIcon(:anything_at_all)") }
+        .to output(%r{\[Glyphs/IconResolution\].*spec/fixtures/nope/lucide/outline}).to_stderr
+    end
+
+    it "warns once per library and variant, not once per call site" do
+      expect { expect_no_offenses("LucideIcon(:one)\nLucideIcon(:two)") }.to output.to_stderr
+      expect { expect_no_offenses("LucideIcon(:three)") }.not_to output.to_stderr
+      expect { expect_no_offenses("HeroIcon(:four)") }.to output(%r{nope/heroicons/outline}).to_stderr
+    end
+  end
+
+  context "when the icons directory does not exist and Strict is enabled" do
+    let(:cop_config) { { "IconsPath" => "spec/fixtures/nope", "Strict" => true } }
+
+    it "reports an offence at the call site instead of warning" do
+      expect do
+        expect_offense(<<~RUBY)
+          LucideIcon(:anything_at_all)
+                     ^^^^^^^^^^^^^^^^ Icon directory `spec/fixtures/nope/lucide/outline` not found, so `LucideIcon` names are not validated. Sync the library or fix `IconsPath`/`Libraries`.
+        RUBY
+      end.not_to output.to_stderr
+
+      expect_no_corrections
+    end
+  end
+
+  # Load-bearing: a library that is synced but genuinely ships no SVGs is not a
+  # misconfiguration, and must not produce an offence on every call site.
+  context "when the icons directory exists but holds no SVGs" do
+    let(:cop_config) do
+      {
+        "IconsPath" => "spec/fixtures/svg/icons",
+        "Libraries" => { "EmptyIcon" => { "Dir" => "emptylib", "DefaultVariant" => "regular" } }
+      }
+    end
+
+    it "stays silent" do
+      expect { expect_no_offenses("EmptyIcon(:whatever_at_all)") }.not_to output.to_stderr
     end
   end
 
