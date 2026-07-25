@@ -20,6 +20,9 @@ Glyphs/IconResolution:
   # Merges over the built-in component => directory/variant defaults, e.g.
   #   PhosphorIcon: { Dir: phosphor, DefaultVariant: light }
   Libraries: {}
+  # An icon directory that does not exist warns once per library/variant.
+  # Strict turns that warning into an offence so CI fails closed.
+  Strict: false
 
 Glyphs/PreferLibraryComponent:
   Description: 'Prefer library-specific components over generic Icon(..., library: ...).'

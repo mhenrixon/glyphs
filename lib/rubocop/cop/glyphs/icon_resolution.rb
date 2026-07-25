@@ -11,6 +11,11 @@ module RuboCop
       # calls (`_lucide(:house)`) are validated. A literal `variant:` keyword is
       # honored; calls with dynamic names or variants are skipped.
       #
+      # A directory that does not exist is a configuration error, not "nothing
+      # to check": it warns once per library/variant, or — with `Strict` — adds
+      # an offence, so the cop can never quietly validate nothing. A directory
+      # that exists but ships no SVGs stays silent.
+      #
       # @example
       #   # bad
       #   LucideIcon(:non_existent_icon)
@@ -51,10 +56,14 @@ module RuboCop
 
         ICONIFY_PATTERN = /\biconify\s+(lucide|phosphor|heroicons)--([a-z0-9-]+)/
 
+        DEFAULT_ICONS_PATH = "app/assets/svg/icons"
+
         RAW_MSG = "Use `%{component}(:%{symbol}, class: \"%{rest}\")` instead of raw `iconify %{library}--…` class."
         RAW_DSTR_MSG = "Use `LucideIcon(name, class: ...)` etc. instead of building a raw " \
                        "`iconify <library>--…` class string."
         MISSING_MSG = "Icon `%{name}` not found in %{library}/%{variant}. %{suggestion}"
+        MISSING_DIR_MSG = "Icon directory `%{path}` not found, so `%{component}` names are not validated. " \
+                          "Sync the library or fix `IconsPath`/`Libraries`."
 
         def on_str(node)
           return if node.parent&.dstr_type?
@@ -97,7 +106,7 @@ module RuboCop
           @libraries ||= DEFAULT_LIBRARIES.merge(cop_config["Libraries"] || {})
         end
 
-        def check_call(node, _component, library)
+        def check_call(node, component, library)
           name = literal_name(node.first_argument)
           return unless name
 
@@ -105,6 +114,7 @@ module RuboCop
           return if variant == :dynamic
 
           available = available_icons(library["Dir"], variant)
+          return report_missing_directory(node, component, library["Dir"], variant) if available.nil?
           return if available.empty?
           return if available.include?(name)
 
@@ -122,6 +132,21 @@ module RuboCop
               end
             corrector.replace(node.first_argument, replacement)
           end
+        end
+
+        # The directory the cop was told to read is missing, so every call for
+        # this library goes unchecked. Report it rather than pass silently.
+        def report_missing_directory(node, component, library_dir, variant)
+          message = format(MISSING_DIR_MSG, path: configured_directory(library_dir, variant), component:)
+          return add_offense(node.first_argument, message:) if cop_config["Strict"]
+
+          self.class.warn_once("[Glyphs/IconResolution] #{message}")
+        end
+
+        # Built from the unexpanded `IconsPath` so the message shows the path as
+        # the project wrote it, not an absolute machine-specific one.
+        def configured_directory(library_dir, variant)
+          self.class.directory_for(cop_config["IconsPath"] || DEFAULT_ICONS_PATH, library_dir, variant)
         end
 
         def variant_for(node, library)
@@ -258,7 +283,7 @@ module RuboCop
         end
 
         def icons_base_path
-          @icons_base_path ||= File.expand_path(cop_config["IconsPath"] || "app/assets/svg/icons", Dir.pwd)
+          @icons_base_path ||= File.expand_path(cop_config["IconsPath"] || DEFAULT_ICONS_PATH, Dir.pwd)
         end
 
         def available_icons(library_dir, variant)
@@ -266,16 +291,39 @@ module RuboCop
         end
 
         class << self
+          # nil when the directory is absent, [] when it exists but ships no
+          # SVGs — the caller has to tell those apart. Memoized with `key?` (not
+          # `||=`) so a nil result is not re-probed on every call site.
           def available_icons_for(base_path, library_dir, variant)
             @available_icons_cache ||= {}
-            @available_icons_cache[[base_path, library_dir, variant]] ||= load_icons(base_path, library_dir, variant)
+            key = [base_path, library_dir, variant]
+            return @available_icons_cache[key] if @available_icons_cache.key?(key)
+
+            @available_icons_cache[key] = load_icons(directory_for(base_path, library_dir, variant))
+          end
+
+          def directory_for(base_path, library_dir, variant)
+            File.join(*[base_path, library_dir, variant].compact.reject { |part| part.to_s.empty? })
+          end
+
+          # RuboCop builds a fresh cop instance per file, so deduplicating the
+          # missing-directory warning has to outlive the instance.
+          def warn_once(message)
+            @warned_messages ||= {}
+            return if @warned_messages.key?(message)
+
+            @warned_messages[message] = true
+            warn message
+          end
+
+          def reset_warnings!
+            @warned_messages = nil
           end
 
           private
 
-          def load_icons(base_path, library_dir, variant)
-            path = File.join(*[base_path, library_dir, variant].compact.reject { |part| part.to_s.empty? })
-            return [] unless Dir.exist?(path)
+          def load_icons(path)
+            return nil unless Dir.exist?(path)
 
             Dir.children(path).filter_map { |file| File.basename(file, ".svg") if file.end_with?(".svg") }.sort
           end

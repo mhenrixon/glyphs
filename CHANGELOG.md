@@ -4,6 +4,16 @@
 
 ### Fixed
 
+- **`Glyphs/IconResolution` no longer fails open on a missing icon directory.**
+  A directory that did not exist produced the same empty list as one that
+  existed with no SVGs, and both were read as "nothing to check" — so a library
+  that was never synced, or a `DefaultVariant` naming a variant the project does
+  not have, silently disabled the cop for every call site of that library. Green
+  cop, green CI, no validation at all, indefinitely. `load_icons` now returns
+  `nil` for an absent directory and `[]` for an empty one; the absent case warns
+  once per library/variant, naming the path. The synced-but-empty case still
+  passes silently. Refs #8
+
 - **Cop options are declared, so RuboCop stops calling them unsupported.**
   `config/default.yml` documented `Libraries` (`Glyphs/IconResolution`) and
   `Mappings` (`Glyphs/LegacyIconHelper`) only in comments, and never mentioned
@@ -23,6 +33,11 @@
   (and parentheses) before walking the value.
 
 ### Added
+
+- **`Glyphs/IconResolution` gained a `Strict` option** (default `false`). It
+  escalates the missing-icon-directory warning above to an offence, so projects
+  that depend on this cop can fail closed in CI instead of trusting a warning
+  not to scroll past.
 
 - **Dynamic icon calls are now resolved from source.** `SourceScanner` no longer
   silently skips `LucideIcon(some_var)` / `PhosphorIcon(tile[:icon])` — it harvests

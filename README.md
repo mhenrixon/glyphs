@@ -235,7 +235,22 @@ Glyphs/IconResolution:
   # Libraries merges over the built-in defaults (component => Dir/DefaultVariant):
   Libraries:
     PhosphorIcon: { Dir: phosphor, DefaultVariant: regular }
+  # Escalate a missing icon directory from a warning to an offence:
+  Strict: false
 ```
+
+If the directory a library resolves to does not exist — the library was never synced, or
+`DefaultVariant` names a variant you do not have — the cop cannot validate any of that
+library's call sites. Rather than pass silently, it warns once per library/variant:
+
+```
+[Glyphs/IconResolution] Icon directory `app/assets/svg/icons/phosphor/regular` not found,
+so `PhosphorIcon` names are not validated. Sync the library or fix `IconsPath`/`Libraries`.
+```
+
+Set `Strict: true` to make that an offence instead, so CI fails closed rather than reporting
+green while checking nothing. A directory that exists but ships no SVGs is not a
+misconfiguration and stays silent either way.
 
 ### Glyphs/PreferLibraryComponent
 
