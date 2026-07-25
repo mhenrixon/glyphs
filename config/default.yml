@@ -3,10 +3,13 @@ Glyphs/LegacyIconHelper:
   Enabled: true
   VersionAdded: '0.1.0'
   SafeAutoCorrect: true
-  # Mappings replaces the built-in defaults when set:
-  # Mappings:
+  # Replaces the built-in helper => component defaults when set, e.g.
   #   _lucide: LucideIcon
   #   _heroicon: HeroIcon
+  Mappings: {}
+  # Merges over the built-in library => component map, e.g.
+  #   customlib: CustomIcon
+  LibraryComponents: {}
   DefaultLibraryComponent: HeroIcon
 
 Glyphs/IconResolution:
@@ -14,12 +17,15 @@ Glyphs/IconResolution:
   Enabled: true
   VersionAdded: '0.1.0'
   IconsPath: app/assets/svg/icons
-  # Libraries merges over the built-in defaults:
-  # Libraries:
+  # Merges over the built-in component => directory/variant defaults, e.g.
   #   PhosphorIcon: { Dir: phosphor, DefaultVariant: light }
+  Libraries: {}
 
 Glyphs/PreferLibraryComponent:
   Description: 'Prefer library-specific components over generic Icon(..., library: ...).'
   Enabled: true
   VersionAdded: '0.1.0'
   SafeAutoCorrect: true
+  # Merges over the built-in library => component map, e.g.
+  #   customlib: CustomIcon
+  LibraryComponents: {}

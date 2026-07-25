@@ -4,6 +4,17 @@
 
 ### Fixed
 
+- **Cop options are declared, so RuboCop stops calling them unsupported.**
+  `config/default.yml` documented `Libraries` (`Glyphs/IconResolution`) and
+  `Mappings` (`Glyphs/LegacyIconHelper`) only in comments, and never mentioned
+  `LibraryComponents` (`Glyphs/LegacyIconHelper`, `Glyphs/PreferLibraryComponent`)
+  at all. RuboCop derives its supported-parameter list from the keys actually
+  present in that file, so it warned `does not support <param> parameter` on
+  every run — for four working options, one of which
+  `Glyphs/LegacyIconHelper` itself tells you to add. Each is now declared with an
+  empty default (a no-op merge), so the options are validated instead of
+  reported, with behaviour unchanged. Refs #7
+
 - **Declaration harvest unwraps trailing `.freeze`.** `ICONS = { "x" => :car }.freeze`
   (and `%i[a b].freeze`) used to yield a Prism `CallNode`, so hash/array values
   were never collected. Cross-file dynamics (`PhosphorIcon(@icon)` in a shared

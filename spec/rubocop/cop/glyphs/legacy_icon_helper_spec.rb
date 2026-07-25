@@ -110,6 +110,24 @@ RSpec.describe RuboCop::Cop::Glyphs::LegacyIconHelper, :config do
     RUBY
   end
 
+  context "with the declared empty Mappings and LibraryComponents defaults" do
+    let(:cop_config) { { "Mappings" => {}, "LibraryComponents" => {} } }
+
+    it "still applies the built-in helper mappings and library components" do
+      expect_offense(<<~RUBY)
+        _lucide(:house)
+        ^^^^^^^ Use `LucideIcon(...)` instead of `_lucide(...)`.
+        icon("check", library: "heroicons")
+        ^^^^ Use `HeroIcon(...)` instead of `icon(...)`.
+      RUBY
+
+      expect_correction(<<~RUBY)
+        LucideIcon(:house)
+        HeroIcon("check")
+      RUBY
+    end
+  end
+
   context "with custom Mappings" do
     let(:cop_config) { { "Mappings" => { "_custom" => "CustomIcon" } } }
 
