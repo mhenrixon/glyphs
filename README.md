@@ -210,6 +210,10 @@ Glyphs/LegacyIconHelper:
   # Mappings replaces the built-in defaults (_lucide/_phosphor/_hero/_heroicon/_tabler):
   # Mappings:
   #   _custom: CustomIcon
+  # LibraryComponents merges over the built-in library => component map, so
+  # `icon("x", library: "customlib")` corrects to `CustomIcon("x")`:
+  # LibraryComponents:
+  #   customlib: CustomIcon
 ```
 
 ### Glyphs/IconResolution
@@ -237,6 +241,15 @@ Glyphs/IconResolution:
 
 ```ruby
 Icon(:house, library: :lucide) # => LucideIcon(:house)
+```
+
+```yaml
+Glyphs/PreferLibraryComponent:
+  Include:
+    - app/**/*.rb
+  # LibraryComponents merges over the built-in library => component map:
+  # LibraryComponents:
+  #   customlib: CustomIcon
 ```
 
 ## Migrating an app off icon helpers

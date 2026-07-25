@@ -41,4 +41,19 @@ RSpec.describe RuboCop::Cop::Glyphs::PreferLibraryComponent, :config do
       Some::Icon(:house, library: :lucide)
     RUBY
   end
+
+  context "with the declared empty LibraryComponents default" do
+    let(:cop_config) { { "LibraryComponents" => {} } }
+
+    it "still applies the built-in library components" do
+      expect_offense(<<~RUBY)
+        Icon(:house, library: :lucide)
+        ^^^^ Use `LucideIcon(...)` instead of `Icon(..., library: ...)`.
+      RUBY
+
+      expect_correction(<<~RUBY)
+        LucideIcon(:house)
+      RUBY
+    end
+  end
 end

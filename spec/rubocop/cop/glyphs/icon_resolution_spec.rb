@@ -135,6 +135,21 @@ RSpec.describe RuboCop::Cop::Glyphs::IconResolution, :config do
     end
   end
 
+  context "with the declared empty Libraries default" do
+    let(:cop_config) { { "IconsPath" => "spec/fixtures/svg/icons", "Libraries" => {} } }
+
+    it "still resolves through the built-in library defaults" do
+      expect_offense(<<~RUBY)
+        PhosphorIcon(:locks)
+                     ^^^^^^ Icon `locks` not found in phosphor/regular. Did you mean `:lock`?
+      RUBY
+
+      expect_correction(<<~RUBY)
+        PhosphorIcon(:lock)
+      RUBY
+    end
+  end
+
   context "with a Libraries override" do
     let(:cop_config) do
       {
